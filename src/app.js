@@ -10,12 +10,20 @@ const app = express();
 app.use(helmet());
 app.use(compression());
 app.use(morgan(config.env === "development" ? "dev" : "combined"));
+// app.use(
+//   cors({
+//     origin: config.frontendUrl,
+//     credentials: true,
+//   }),
+// );
+
+
 app.use(
   cors({
-    origin: config.frontendUrl,
-    credentials: true,
+    origin: "*",
   }),
 );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

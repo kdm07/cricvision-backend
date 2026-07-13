@@ -6,8 +6,14 @@ const db = require("./database/models");
 
 const server = http.createServer(app);
 
+// const io = new Server(server, {
+//   cors: { origin: config.frontendUrl, credentials: true },
+// });
+
 const io = new Server(server, {
-  cors: { origin: config.frontendUrl, credentials: true },
+  cors: {
+    origin: "*",
+  },
 });
 
 io.on("connection", (socket) => {
