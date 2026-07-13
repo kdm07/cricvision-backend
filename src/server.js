@@ -45,11 +45,11 @@ async function start() {
 
     console.log("Database connection established");
 
-    // await db.sequelize.sync();
+    await db.sequelize.sync();
 
-    await db.sequelize.sync({
-      force: true,
-    });
+    // await db.sequelize.sync({
+    //   force: true,
+    // });
 
     console.log("Database synced");
 
