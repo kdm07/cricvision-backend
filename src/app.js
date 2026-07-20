@@ -39,7 +39,8 @@ const aiRoutes = require("./ai/ai.routes");
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/ai", aiRoutes);
-
+app.use("/api/players", require("./players/player.routes"));
+app.use("/api/players", require("./players/playerTag.routes"));
 // Routes will be mounted here once controllers are built, e.g.:
 // app.use("/api/players", require("./routes/player.routes"));
 

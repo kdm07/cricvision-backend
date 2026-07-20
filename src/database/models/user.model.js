@@ -15,6 +15,9 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   User.associate = (models) => {
+    // One login account maps to at most one cricket Player profile.
+    User.hasOne(models.Player, { foreignKey: "userId", as: "playerProfile" });
+
     User.hasMany(models.PlayerMatchStat, {
       foreignKey: "enteredById",
       as: "statsEntered",

@@ -16,15 +16,90 @@
  * the PlayerContext shape documented in promptBuilder.js — swap the body of
  * getPlayerContext() to real Sequelize queries and nothing else needs to change.
  *
- * The data below mirrors the demo data already shown on the player's
- * Profile page (Niteesha Kunchala) so the AI Coach's answers stay consistent
- * with what the player sees elsewhere in the app.
+ * DATA CONVENTION (important, read before adding entries):
+ * A field is either present with a REAL value, or it is `null` / an empty
+ * array / entirely absent. NEVER use the string "N/A" (or similar
+ * placeholder text) anywhere in this file.
+ *   - `null`            → the section/field has not been filled in yet.
+ *     promptBuilder's formatters omit it from the Gemini prompt, and the
+ *     frontend renders it as a styled empty-state prompt (EmptyField /
+ *     EmptySection), never literal "N/A" text.
+ *   - `0` / real number  → a genuine value (e.g. a brand-new player really
+ *     has 0 career matches — that's data, not an absence of data, and
+ *     should render as a normal stat, not an empty state).
+ *   - `[]`               → the list exists conceptually but has no entries
+ *     yet (e.g. no strengths logged yet) — distinct from `null`, since the
+ *     frontend can offer "+ Add a strength" rather than a generic prompt.
  */
 
 /**
- * Manually maintained context, keyed by userId. Extend this map (or replace
- * it with a single default if you only have one active player for now) as
- * more players onboard.
+ * Returns a fresh default context for a player who has just signed up and
+ * has not filled in anything beyond their account identity (name/email,
+ * handled outside this module via the `users` table).
+ *
+ * Use this as the starting point for any new manual entry, and as the
+ * fallback for userIds not yet present in MANUAL_PLAYER_CONTEXT, so new
+ * players get correctly-typed emptiness (nulls/[]s) instead of a bare `{}`
+ * that silently degrades every section at once.
+ *
+ * @param {{ name?: string }} [overrides] - identity fields already known
+ *   at signup (e.g. full name from the users table) that shouldn't be null.
+ */
+function buildDefaultPlayerContext(overrides = {}) {
+  return {
+    profile: {
+      name: overrides.name ?? null,
+      role: null,
+      battingStyle: null,
+      bowlingStyle: null,
+      team: null,
+      jerseyNumber: null,
+    },
+
+    // Career totals are real zeros for a brand-new player, not missing
+    // data — render normally (e.g. StatTile), not as an empty state.
+    battingStats: {
+      matches: 0,
+      runs: 0,
+      average: 0,
+      strikeRate: 0,
+      centuries: 0,
+      highScore: 0,
+    },
+
+    bowlingStats: null, // omit entirely until the player logs a bowling style
+    fieldingStats: null,
+
+    strengths: [],
+    weaknesses: [],
+    trainingFocus: [],
+    coachObservations: [],
+
+    sleep: null,
+    recovery: null,
+    nutrition: null,
+
+    injuryStatus: {
+      current: null,
+      history: [],
+    },
+    medicalHistory: null,
+
+    // Only ever present if the player has explicitly opted in — omitted by
+    // default, never a placeholder.
+    cycleTracking: null,
+
+    upcomingMatch: null,
+    opponentScoutingReports: [],
+
+    goals: null,
+  };
+}
+
+/**
+ * Manually maintained context, keyed by userId. Extend this map as more
+ * players onboard with real data. Any userId not present here falls back
+ * to `buildDefaultPlayerContext()` in getPlayerContext() below.
  */
 const MANUAL_PLAYER_CONTEXT = {
   // Replace `1` with the real numeric userId of the account you're testing
@@ -123,7 +198,7 @@ const MANUAL_PLAYER_CONTEXT = {
     },
 
     injuryStatus: {
-      current: null, // "None reported"
+      current: null, // "None reported" — rendered by the UI, not stored as text
       history: [
         {
           injury: "Left hamstring strain",
@@ -169,23 +244,32 @@ const MANUAL_PLAYER_CONTEXT = {
     goals:
       "Break into the national T20I squad within 12 months; improve strike rate against pace to 145+.",
   },
+
+  // Example of a brand-new signup with only identity data set — everything
+  // else deliberately uses buildDefaultPlayerContext() rather than being
+  // hand-typed out, so it can never drift from the null/[] convention above.
+  // Uncomment and set the real userId once you have a second test account:
+  //
+  // 2: buildDefaultPlayerContext({ name: "New Player Name" }),
 };
 
 /**
  * Fetch manually-maintained player context for a given userId.
  *
- * Returns an empty object (not null) if no manual entry exists for this
- * user — promptBuilder's section formatters all handle missing fields
- * gracefully and will simply omit every section, degrading to general
- * coaching advice rather than throwing.
+ * Falls back to buildDefaultPlayerContext() — never a bare `{}` — for any
+ * userId not present in MANUAL_PLAYER_CONTEXT, so a brand-new player still
+ * gets correctly-typed emptiness (real zeros for career stats, null for
+ * everything else) rather than every single section vanishing at once with
+ * no distinction between "zero matches played" and "no data on file".
  *
  * @param {number} userId
  * @returns {Promise<import('./promptBuilder').PlayerContext>}
  */
 async function getPlayerContext(userId) {
-  return MANUAL_PLAYER_CONTEXT[userId] || {};
+  return MANUAL_PLAYER_CONTEXT[userId] ?? buildDefaultPlayerContext();
 }
 
 module.exports = {
   getPlayerContext,
+  buildDefaultPlayerContext,
 };
