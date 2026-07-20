@@ -30,16 +30,17 @@ function serialize(player) {
       careerAverage: Number(player.careerAverage),
       careerStrikeRate: Number(player.careerStrikeRate),
     },
+    // Every editable tab section (Cricket/Performance/Fitness/Nutrition/
+    // Mindset/Medical), keyed by section name. Empty object for a
+    // brand-new player who hasn't edited anything yet — the frontend
+    // falls back to its own display defaults in that case.
+    sections: player.extendedProfile || {},
   };
 }
 
 async function getMe(req, res) {
   try {
-    // console.log("req.user:", req.user)
-    const player = await playerService.getMyProfile(
-      req.user.id,
-      req.user.fullName,
-    );
+    const player = await playerService.getMyProfile(req.user.id);
     return res.status(200).json({ profile: serialize(player) });
   } catch (err) {
     return respondWithError(res, err, "Get player profile error:");
@@ -55,6 +56,20 @@ async function updateMe(req, res) {
   }
 }
 
+async function updateSection(req, res) {
+  try {
+    const { section } = req.params;
+    const player = await playerService.updateMySection(
+      req.user.id,
+      section,
+      req.body,
+    );
+    return res.status(200).json({ profile: serialize(player) });
+  } catch (err) {
+    return respondWithError(res, err, "Update player section error:");
+  }
+}
+
 async function recalculateSnapshot(req, res) {
   try {
     const player = await playerService.recalculateMySnapshot(req.user.id);
@@ -64,4 +79,4 @@ async function recalculateSnapshot(req, res) {
   }
 }
 
-module.exports = { getMe, updateMe, recalculateSnapshot };
+module.exports = { getMe, updateMe, updateSection, recalculateSnapshot };

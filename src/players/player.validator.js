@@ -1,6 +1,7 @@
 "use strict";
 
-const { body, validationResult } = require("express-validator");
+const { body, param, validationResult } = require("express-validator");
+const { EDITABLE_SECTIONS } = require("./player.constants");
 
 function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
@@ -56,4 +57,29 @@ const updateProfileValidator = [
   handleValidationErrors,
 ];
 
-module.exports = { updateProfileValidator };
+// Generic section-editor validator, used by PATCH /players/me/sections/:section.
+// The section name is checked against the canonical list so a typo or a
+// tampered request can't write an arbitrary new key into the JSON blob.
+// The body itself is intentionally loosely validated (object or array,
+// reasonable size cap) since each of the 27 sections has its own shape —
+// tightening a specific section's shape further is a one-line addition
+// here if you want stricter guarantees for that section later.
+const MAX_SECTION_BODY_BYTES = 20_000; // ~20kb, generous for a list of rows
+
+const updateSectionValidator = [
+  param("section")
+    .isIn(EDITABLE_SECTIONS)
+    .withMessage("Unknown profile section."),
+  body().custom((value) => {
+    if (value === null || typeof value !== "object") {
+      throw new Error("Section body must be a JSON object or array.");
+    }
+    if (JSON.stringify(value).length > MAX_SECTION_BODY_BYTES) {
+      throw new Error("Section body is too large.");
+    }
+    return true;
+  }),
+  handleValidationErrors,
+];
+
+module.exports = { updateProfileValidator, updateSectionValidator };

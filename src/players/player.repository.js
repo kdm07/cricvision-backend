@@ -50,6 +50,27 @@ async function updateByUserId(userId, fields) {
 }
 
 /**
+ * Overwrite a single section inside Player.extendedProfile, leaving every
+ * other section untouched. `data` can be an array (list sections) or a
+ * plain object (record sections) — stored as-is.
+ */
+async function updateExtendedSection(userId, section, data) {
+  const player = await findByUserId(userId);
+  if (!player) return null;
+
+  const current = player.extendedProfile || {};
+  const next = { ...current, [section]: data };
+
+  // JSON columns need an explicit changed() flag in some Sequelize/dialect
+  // combos since the reference itself is new but Sequelize can't always
+  // diff nested JSON automatically.
+  await player.update({ extendedProfile: next });
+  player.changed("extendedProfile", true);
+
+  return player;
+}
+
+/**
  * Recompute career-snapshot fields from PlayerMatchStat and overwrite the
  * cache on Player. Used by an optional "Recalculate from match data" action
  * once a player has real per-match rows — not called automatically.
@@ -92,5 +113,6 @@ module.exports = {
   findByUserId,
   createForUser,
   updateByUserId,
+  updateExtendedSection,
   recalculateSnapshotFromMatchStats,
 };
