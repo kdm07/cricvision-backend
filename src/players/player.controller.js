@@ -30,11 +30,31 @@ function serialize(player) {
       careerAverage: Number(player.careerAverage),
       careerStrikeRate: Number(player.careerStrikeRate),
     },
-    // Every editable tab section (Cricket/Performance/Fitness/Nutrition/
-    // Mindset/Medical), keyed by section name. Empty object for a
-    // brand-new player who hasn't edited anything yet — the frontend
-    // falls back to its own display defaults in that case.
     sections: player.extendedProfile || {},
+  };
+}
+
+/** Serializer for the admin/staff Players directory + scouting profile —
+ * includes the team and economy figure that self-service "me" doesn't need. */
+function serializeRoster(player, team) {
+  return {
+    id: player.id,
+    fullName: player.fullName,
+    role: player.role,
+    battingStyle: player.battingStyle,
+    bowlingStyle: player.bowlingStyle,
+    dateOfBirth: player.dateOfBirth,
+    jerseyNumber: player.jerseyNumber,
+    region: player.region,
+    team: team ? { id: team.id, name: team.name } : null,
+    careerSnapshot: {
+      careerMatches: player.careerMatches,
+      careerRuns: player.careerRuns,
+      careerWickets: player.careerWickets,
+      careerAverage: Number(player.careerAverage),
+      careerStrikeRate: Number(player.careerStrikeRate),
+      careerEconomy: Number(player.careerEconomy),
+    },
   };
 }
 
@@ -79,4 +99,68 @@ async function recalculateSnapshot(req, res) {
   }
 }
 
-module.exports = { getMe, updateMe, updateSection, recalculateSnapshot };
+/* ------------------------- admin/staff (Players directory) ------------------------- */
+
+async function list(req, res) {
+  try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search : undefined;
+    const rows = await playerService.listPlayers(search);
+    return res.status(200).json({
+      players: rows.map(({ player, team }) => serializeRoster(player, team)),
+    });
+  } catch (err) {
+    return respondWithError(res, err, "List players error:");
+  }
+}
+
+async function getById(req, res) {
+  try {
+    const { player, team } = await playerService.getPlayerById(req.params.id);
+    return res.status(200).json({ player: serializeRoster(player, team) });
+  } catch (err) {
+    return respondWithError(res, err, "Get player error:");
+  }
+}
+
+async function create(req, res) {
+  try {
+    const { player, team } = await playerService.createPlayer(req.body);
+    return res.status(201).json({ player: serializeRoster(player, team) });
+  } catch (err) {
+    return respondWithError(res, err, "Create player error:");
+  }
+}
+
+async function updateById(req, res) {
+  try {
+    const { player, team } = await playerService.updatePlayerById(
+      req.params.id,
+      req.body,
+    );
+    return res.status(200).json({ player: serializeRoster(player, team) });
+  } catch (err) {
+    return respondWithError(res, err, "Update player error:");
+  }
+}
+
+async function getScoutingDetail(req, res) {
+  try {
+    const detail = await playerService.getScoutingDetail(req.params.id);
+    return res.status(200).json(detail);
+  } catch (err) {
+    return respondWithError(res, err, "Get scouting detail error:");
+  }
+}
+
+module.exports = {
+  getMe,
+  updateMe,
+  updateSection,
+  recalculateSnapshot,
+  list,
+  getById,
+  create,
+  updateById,
+  getScoutingDetail,
+};

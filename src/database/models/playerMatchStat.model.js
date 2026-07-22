@@ -11,6 +11,9 @@ module.exports = (sequelize, DataTypes) => {
     oversBowled: { type: DataTypes.DECIMAL(5, 1), defaultValue: 0 },
     runsConceded: { type: DataTypes.INTEGER, defaultValue: 0 },
     catches: { type: DataTypes.INTEGER, defaultValue: 0 },
+    // e.g. "not out", "lbw", "caught", "bowled", "run out" — shown in the
+    // scouting profile's Match-by-Match table.
+    dismissalType: { type: DataTypes.STRING, allowNull: true },
     strikeRate: {
       type: DataTypes.VIRTUAL,
       get() {

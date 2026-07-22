@@ -12,8 +12,7 @@ function handleValidationErrors(req, res, next) {
 
 const VALID_ROLES = ["Batter", "Bowler", "AllRounder", "WicketKeeper"];
 
-const updateProfileValidator = [
-  body("fullName").optional().isString().trim().isLength({ min: 1, max: 120 }),
+const commonPlayerFieldRules = [
   body("role")
     .optional({ nullable: true })
     .isIn(VALID_ROLES)
@@ -35,9 +34,10 @@ const updateProfileValidator = [
     .trim()
     .isLength({ max: 120 }),
   body("dateOfBirth").optional({ nullable: true }).isISO8601(),
-
-  // Career snapshot — bounded so an editable field can't silently corrupt
-  // the UI with negative or absurd values.
+  body("teamId")
+    .optional({ nullable: true })
+    .isUUID()
+    .withMessage("Invalid team."),
   body("careerMatches")
     .optional({ nullable: true })
     .isInt({ min: 0, max: 5000 }),
@@ -53,18 +53,18 @@ const updateProfileValidator = [
   body("careerStrikeRate")
     .optional({ nullable: true })
     .isFloat({ min: 0, max: 999 }),
+  body("careerEconomy")
+    .optional({ nullable: true })
+    .isFloat({ min: 0, max: 99 }),
+];
 
+const updateProfileValidator = [
+  body("fullName").optional().isString().trim().isLength({ min: 1, max: 120 }),
+  ...commonPlayerFieldRules,
   handleValidationErrors,
 ];
 
-// Generic section-editor validator, used by PATCH /players/me/sections/:section.
-// The section name is checked against the canonical list so a typo or a
-// tampered request can't write an arbitrary new key into the JSON blob.
-// The body itself is intentionally loosely validated (object or array,
-// reasonable size cap) since each of the 27 sections has its own shape —
-// tightening a specific section's shape further is a one-line addition
-// here if you want stricter guarantees for that section later.
-const MAX_SECTION_BODY_BYTES = 20_000; // ~20kb, generous for a list of rows
+const MAX_SECTION_BODY_BYTES = 20_000;
 
 const updateSectionValidator = [
   param("section")
@@ -82,4 +82,28 @@ const updateSectionValidator = [
   handleValidationErrors,
 ];
 
-module.exports = { updateProfileValidator, updateSectionValidator };
+/* ------------------------- admin/staff (Players directory) ------------------------- */
+
+const createPlayerValidator = [
+  body("fullName")
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 120 })
+    .withMessage("Full name is required."),
+  ...commonPlayerFieldRules,
+  handleValidationErrors,
+];
+
+const updatePlayerByIdValidator = [
+  param("id").isUUID().withMessage("Invalid player id."),
+  body("fullName").optional().isString().trim().isLength({ min: 1, max: 120 }),
+  ...commonPlayerFieldRules,
+  handleValidationErrors,
+];
+
+module.exports = {
+  updateProfileValidator,
+  updateSectionValidator,
+  createPlayerValidator,
+  updatePlayerByIdValidator,
+};

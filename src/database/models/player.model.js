@@ -22,7 +22,6 @@ module.exports = (sequelize, DataTypes) => {
     jerseyNumber: DataTypes.INTEGER,
     region: DataTypes.STRING,
 
-    // Editable career-snapshot cache (see migration comment for rationale).
     careerMatches: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -44,10 +43,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0,
     },
+    // Bowling economy — added for the Players directory ("Econ" column) and
+    // scouting profile Career Card, which both display it.
+    careerEconomy: {
+      type: DataTypes.DECIMAL(6, 2),
+      allowNull: false,
+      defaultValue: 0,
+    },
 
-    // Generic bucket for every editable profile-tab section (Cricket
-    // Basic/Playing Info, Journey, Performance notes, Fitness, Nutrition,
-    // Mindset, Medical). See migration for the shape and rationale.
     extendedProfile: {
       type: DataTypes.JSON,
       allowNull: false,
